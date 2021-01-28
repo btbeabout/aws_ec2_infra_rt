@@ -1,0 +1,155 @@
+Description: >
+    Sets up LongTerm Redirector and LongTerm C2 servers and corresponding firewall
+    
+Parameters:
+  LongTermC2IPAddress:
+      Description: Private IP address for internal LongTerm server
+      Type: String
+      Default: 10.0.2.30
+
+  LongTermRedirectorIPAddress:
+      Description: Private IP address for external LongTerm Redirector server
+      Type: String
+      Default: 10.0.1.30
+
+  SSHKeyName:
+      Description: Private IP address for external LongTerm Redirector server
+      Type: String
+      Default: "NULL"
+
+  S3BucketName:
+      Description: Private IP address for external LongTerm Redirector server
+      Type: String
+      Default: "NULL"
+
+Resources:
+  LongTermRedirectorSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http/s to our hosts and SSH
+      VpcId:
+        Fn::ImportValue:
+          !Sub "VPCId"      
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+
+  LongTermC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http/s to our hosts and SSH
+      VpcId:
+        Fn::ImportValue:
+          !Sub "VPCId"      
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 7443
+        ToPort: 7443
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+
+  LongTermRedirector:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile:
+        Fn::ImportValue:
+          !Sub "S3DownloadProfileName"
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+            sudo su
+            apt-get update -y
+            apt-get install unzip awscli -y
+            apt-get install apache2 -y
+            systemctl start apache2.service
+            cd /var/www/html
+            aws s3 cp s3://${bucket_id}/LongTerm/.htaccess .
+            sed -i '172 s/None/All/' /etc/apache2/apache2.conf
+            a2enmod rewrite proxy proxy_http
+            systemctl restart apache2.service
+          - bucket_id: !Ref S3BucketName
+      ImageId: ami-07dd19a7900a1f049
+      SecurityGroupIds:
+      - Ref: LongTermRedirectorSecurityGroup
+      KeyName: !Ref SSHKeyName
+      PrivateIpAddress: !Ref LongTermRedirectorIPAddress
+      InstanceType: t2.micro
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "PublicSubnet"
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdk"
+        Ebs:
+          VolumeSize: '8'
+      Tags: 
+          - Key: Name 
+            Value: LongTerm Redirector
+
+  LongTermC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile:
+        Fn::ImportValue:
+          !Sub "S3DownloadProfileName"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo su
+          apt-get update -y
+          apt-get install unzip awscli -y
+          cd /opt
+          git clone https://github.com/its-a-feature/Mythic
+          cd Mythic
+          ./install_docker_ubuntu.sh
+          ./start_mythic.sh
+      ImageId: ami-07dd19a7900a1f049
+      SecurityGroupIds:
+      - Ref: LongTermC2SecurityGroup
+      KeyName: !Ref SSHKeyName
+      PrivateIpAddress: !Ref LongTermC2IPAddress
+      InstanceType: t2.micro
+      SubnetId:
+        Fn::ImportValue:
+          !Sub "PrivateSubnet"
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdk"
+        Ebs:
+          VolumeSize: '8'
+      Tags: 
+          - Key: Name 
+            Value: LongTerm C2
+
+Outputs: 
+  LongTermRedirector: 
+      Description: LongTermRedirector's Public DNS
+      Value: !GetAtt LongTermRedirector.PublicDnsName
+      Export:
+        Name: LongTermRedirectorPublicDNS
