@@ -1,6 +1,8 @@
 # aws_ec2_infra_rt
 Simple repo to store some scripts for automating the deployment of an Amazon VPC with two subnets and three hosts with CloudFormation.
 
+Use requires an AWS account with programmable access.
+
 The idea behind this repo is to set out some simple, editable files that can be used with the awscli, CloudFormation, and S3 to make it easier to deploy (and re-deploy) a cloud-hosted infrastructure in a semi=piecemeal fashion following this layout:
 
 ![Infrastructure](/images/Capture.PNG)
