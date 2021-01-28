@@ -1,7 +1,9 @@
 # aws_ec2_infra_rt
 Simple repo to store some scripts for automating the deployment of an Amazon VPC with two subnets and three hosts with CloudFormation.
 
-The idea behind this repo is to set out some simple, editable files that can be used with the awscli, CloudFormation, and S3 to make it easier to deploy (and re-deploy) a cloud-hosted infrastructure in a semi=piecemeal fashion.
+The idea behind this repo is to set out some simple, editable files that can be used with the awscli, CloudFormation, and S3 to make it easier to deploy (and re-deploy) a cloud-hosted infrastructure in a semi=piecemeal fashion following this layout:
+
+![Infrastructure](/images/Capture.PNG)
 
 The s3_upload.sh script creates an S3 bucket (leveraging a Bash variable named my_aws_bucket which needs to be set prior to use), configures the bucket's privacy settings as to not expose the contents publicly, then uploads all files in the S3/Longterm directory (currently a single .htaccess file). This is in anticipation of using these files when provisioning the following VMs.
 
