@@ -13,3 +13,5 @@ The create_longterm_servers.sh script also contains a single awscli command that
 * Depends on the existence of longterm_servers.yml and long_term_parameters.json (which isn't included in this repo, but follows the same logic as red_team_vpc_parameters.json).
 * Uses the IAM role configured by create_vpc.sh to pull down the .htaccess file from S3 to the Redirector, which also configures Apache2 to use mod_rewrite redirection.
 * Downloads and configures Mythic C2 on the private C2 server with default settings.
+
+The benefit of having one script to generate first the VPC + Bastion and another to generate the longterm C2 servers is that if the longterm C2 servers get burned, they can be re-deployed without requiring tearing down the entire VPC framework.
